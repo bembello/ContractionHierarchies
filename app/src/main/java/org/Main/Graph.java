@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 
 public class Graph {
@@ -39,11 +40,23 @@ public class Graph {
         }
     }
 
+        public List<Edge> getEdges() {
+        Set<Edge> edgeSet = new HashSet<>();
+        
+        // Collect all edges from adjacency list
+        for (List<Edge> edges : adjacencyList.values()) {
+            edgeSet.addAll(edges);
+        }
+        
+        return new ArrayList<>(edgeSet);
+    }
+
     // Get all vertices in the graph
     public Map<Long, Vertex> getVertices() {
         return vertices;
     }
 
+    
     // Get adjacency list (all edges of each vertex)
     public Map<Long, List<Edge>> getAdjacencyList() {
         return adjacencyList;
