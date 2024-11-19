@@ -3,14 +3,23 @@ package org.Main;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 
 public class ContractionHierarchy {
     private Graph graph;
-    private List<Vertex> vertexOrder;  // The order in which vertices will be contracted
+    private List<Vertex> vertexOrder;
     private Set<Vertex> contractedVertices;
-    private Map<Vertex, Integer> rankMap; // To store the rank of each vertex
-    private List<Edge> allEdges; // To track all edges including shortcut edges
+    private Map<Vertex, Integer> rankMap;
+    private List<Edge> allEdges;
+    private int lazyUpdateCount = 0;
+    private int updateThreshold = 50;
     
     public ContractionHierarchy(Graph graph) {
         this.graph = graph;
@@ -20,104 +29,130 @@ public class ContractionHierarchy {
         this.allEdges = new ArrayList<>();
     }
 
-    // Preprocesses the graph (contraction phase)
     public void preprocess() {
-        long startTime = System.nanoTime();  // Start time for preprocessing
-        
-        // Step 1: Initialize the vertex order based on the edge difference heuristic
-        PriorityQueue<Vertex> priorityQueue = new PriorityQueue<>(Comparator.comparingInt(this::getEdgeDifference));
-        
+        long startTime = System.nanoTime();
+
+        // Priority Queue to decide which node to contract next based on updated priority formula
+        PriorityQueue<Vertex> priorityQueue = new PriorityQueue<>(Comparator.comparingInt(this::getNodePriority));
+
+        // Add all vertices to the priority queue initially
         for (Vertex vertex : graph.getVertices().values()) {
             priorityQueue.add(vertex);
         }
 
-        System.out.println("Step 1 done");
+        // Set to track dirty vertices for lazy updates
+        Set<Vertex> dirtyVertices = new HashSet<>();
 
-        // Step 2: Rank the nodes based on edge difference heuristic
         while (!priorityQueue.isEmpty()) {
             System.out.println(priorityQueue.size());
             Vertex v = priorityQueue.poll();
-            if (contractedVertices.contains(v)) continue; // Skip contracted nodes
+
+            // Skip if vertex has been contracted
+            if (contractedVertices.contains(v)) continue;
+
+            // Lazy update check: reinsert dirty nodes
+            if (dirtyVertices.contains(v)) {
+                priorityQueue.add(v);
+                dirtyVertices.remove(v);
+                lazyUpdateCount++;
+                continue;
+            }
+
+            // Contract the vertex
             vertexOrder.add(v);
             contractedVertices.add(v);
             rankMap.put(v, vertexOrder.size());
 
-            // Step 3: Contract vertex v
+            // Simulate 1-hop contraction (neighbor contraction and shortcut addition)
             contractVertex(v);
 
-            // Update the priority queue based on the new state of the graph
-            updatePriorityQueue(priorityQueue);
+            // Periodically reorder the priority queue after every 50 updates
+            if (lazyUpdateCount >= updateThreshold) {
+                updatePriorityQueue(priorityQueue);
+                dirtyVertices.clear(); // Clear dirty list
+                lazyUpdateCount = 0;
+            }
         }
 
-        System.out.println("Step 2 done");
-
-        long endTime = System.nanoTime();  // End time for preprocessing
+        long endTime = System.nanoTime();
         System.out.println("Preprocessing complete. Total vertices contracted: " + vertexOrder.size());
         System.out.println("Preprocessing time: " + (endTime - startTime) / 1_000_000 + " ms");
     }
 
-    // Get the edge difference for a vertex (used for edge difference heuristic)
-    private int getEdgeDifference(Vertex v) {
-        Set<Edge> activeEdges = v.getActiveEdges(); // Get active edges (not contracted ones)
-        return activeEdges.size();
+    // Calculate priority based on edgeDiff and deletedNeighbors
+    private int getNodePriority(Vertex v) {
+        int edgeDiff = getEdgeDifference(v);
+        int deletedNeighbors = getDeletedNeighbors(v);
+        return (int) (edgeDiff + 0.75 * deletedNeighbors); // Prioritizing based on the new formula
     }
 
-    // Contract a vertex: remove it from the graph and add shortcut edges
+    // Calculate edge difference for a vertex: how many edges to contract
+    private int getEdgeDifference(Vertex v) {
+        Set<Edge> activeEdges = v.getActiveEdges();
+        int contractedNeighbors = (int) v.getEdges().stream()
+                .filter(e -> contractedVertices.contains(graph.getVertexById(e.getTo())))
+                .count();
+        return activeEdges.size() + contractedNeighbors; // Edge difference based on remaining edges and contracted neighbors
+    }
+
+    // Calculate how many neighbors of v are contracted
+    private int getDeletedNeighbors(Vertex v) {
+        return (int) v.getEdges().stream()
+                .filter(e -> contractedVertices.contains(graph.getVertexById(e.getTo())))
+                .count();
+    }
+
     private void contractVertex(Vertex v) {
         Set<Edge> neighbors = v.getEdges();
         List<Vertex> neighborList = new ArrayList<>();
 
-        // Step 1: Collect neighbors of the vertex to be contracted
+        // Collect all non-contracted neighbors for 1-hop contraction simulation
         for (Edge edge : neighbors) {
-            if (!contractedVertices.contains(graph.getVertexById(edge.getTo()))) {
-                neighborList.add(graph.getVertexById(edge.getTo()));
+            Vertex u = graph.getVertexById(edge.getTo());
+            if (!contractedVertices.contains(u)) {
+                neighborList.add(u);
             }
         }
-        // Step 2: Add shortcut edges between neighbors if applicable
+
+        // Simulate 1-hop contraction: Adding shortcut edges if necessary
         for (int i = 0; i < neighborList.size(); i++) {
             Vertex u = neighborList.get(i);
             for (int j = i + 1; j < neighborList.size(); j++) {
                 Vertex w = neighborList.get(j);
-                
-                // If the shortest path between u and w goes through v, add a shortcut edge
+
+                // If the path u-v-w is unique, we add a shortcut
                 if (isUniqueShortestPath(u, v, w)) {
                     int shortcutCost = getCostBetween(u, v) + getCostBetween(v, w);
                     Edge shortcutEdge = new Edge(u.getId(), w.getId(), shortcutCost);
-                    graph.addEdge(u.getId(), w.getId(), shortcutCost);  // Add shortcut edge
-                    allEdges.add(shortcutEdge); // Store the shortcut edge
-                    System.out.println("done");
+                    graph.addEdge(u.getId(), w.getId(), shortcutCost);
+                    allEdges.add(shortcutEdge);
                 }
             }
         }
 
-        // Step 3: Mark the vertex as contracted (lazy update approach)
         contractedVertices.add(v);
     }
 
-    // Check if the shortest path between u, v, and w is unique
+    // Check if the u-v-w path is the unique shortest path
     private boolean isUniqueShortestPath(Vertex u, Vertex v, Vertex w) {
-        // Run Dijkstra on the sub-paths (u -> v) and (v -> w)
         QueryResult uvResult = Dijkstra.dijkstra(graph, u.getId(), v.getId());
         QueryResult vwResult = Dijkstra.dijkstra(graph, v.getId(), w.getId());
-        
+
         if (uvResult.getShortestPath() == -1 || vwResult.getShortestPath() == -1) {
-            return false;  // No path exists between u and v, or v and w
+            return false;
         }
-        
-        // Calculate the expected total distance for the u -> v -> w path
+
         long expectedDistance = uvResult.getShortestPath() + vwResult.getShortestPath();
-        
-        // Now, check if there is any shorter path between u and w (directly or via any other vertex)
         QueryResult uwResult = Dijkstra.dijkstra(graph, u.getId(), w.getId());
-        
-        // If the distance from u -> w is strictly less than the combined u -> v -> w, then the path is not unique
+
         return uwResult.getShortestPath() >= expectedDistance;
     }
 
-    // Update the priority queue after each contraction (lazy update)
+    // Perform batch processing for Dijkstra's algorithm
     private void updatePriorityQueue(PriorityQueue<Vertex> priorityQueue) {
-        // Re-calculate the priority queue based on the new state of the graph
-        priorityQueue.clear(); 
+        priorityQueue.clear(); // Clear the current queue
+
+        // Reinsert all uncontracted vertices into the priority queue
         for (Vertex vertex : graph.getVertices().values()) {
             if (!contractedVertices.contains(vertex)) {
                 priorityQueue.add(vertex);
@@ -125,30 +160,28 @@ public class ContractionHierarchy {
         }
     }
 
-    // Get cost between two vertices (used to calculate shortcut edge cost)
     private int getCostBetween(Vertex u, Vertex v) {
-        // Implement logic to get the cost of an edge between u and v
-        return u.getCostTo(v); // Placeholder, adjust based on your graph structure
+        return u.getCostTo(v); // Placeholder logic for computing cost between two vertices
     }
 
-    // Export the augmented graph to a text file
+    // Export the augmented graph with contracted vertices and shortcuts
     public void exportAugmentedGraph(String filename) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
-            // Write the number of vertices and edges (original + shortcut edges)
             writer.write(graph.getVertices().size() + " " + (graph.getEdges().size() + allEdges.size()));
             writer.newLine();
 
-            // Write the vertices with their rank
             for (Vertex vertex : graph.getVertices().values()) {
-                int rank = rankMap.getOrDefault(vertex, -1); // Get the rank of the vertex
+                int rank = rankMap.getOrDefault(vertex, -1);
                 writer.write(vertex.getId() + " " + rank);
                 writer.newLine();
             }
 
-            // Write the edges (including shortcut edges)
+            // Write original edges excluding contracted ones
             for (Edge edge : graph.getEdges()) {
-                writer.write(edge.getFrom() + " " + edge.getTo() + " " + edge.getCost() + " -1");
-                writer.newLine();
+                if (!contractedVertices.contains(graph.getVertexById(edge.getTo()))) {
+                    writer.write(edge.getFrom() + " " + edge.getTo() + " " + edge.getCost() + " -1");
+                    writer.newLine();
+                }
             }
 
             // Write shortcut edges
@@ -161,11 +194,5 @@ public class ContractionHierarchy {
         } catch (IOException e) {
             System.err.println("Error writing augmented graph to file: " + e.getMessage());
         }
-    }
-
-    // Run bidirectional Dijkstra to find the shortest path between source and target
-    public QueryResult bidirectionalDijkstra(int source, int target) {
-        
-        return BidirectionalDijkstra.bidirectionalDijkstra(graph, source, target);
     }
 }

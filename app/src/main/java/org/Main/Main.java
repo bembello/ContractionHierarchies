@@ -19,8 +19,7 @@ public class Main {
         double contractionTimeInSeconds = (end - start) / 1_000_000_000.0; // Convert to seconds
         System.out.println("Contraction time (s): " + contractionTimeInSeconds);
 
-        // Optionally, save the augmented graph here (after preprocessing)
-        // graph.saveAugmentedGraph("augmented_denmark.graph");
+        contractionHierarchy.exportAugmentedGraph("augmented_denmark.graph");
     }
 
     public static void main(String[] args) {
@@ -33,10 +32,10 @@ public class Main {
 
             Graph graph = Graph.readGraphFromInput(inputStream);
 
-            // Step 1: Perform the contraction phase (preprocessing)
+            // Perform the contraction phase (preprocessing)
             contractionPhase(graph);
 
-            // Step 2: Generate 1,000 random source-target pairs
+            // Generate 1,000 random source-target pairs
             int numVertices = graph.getVertices().size();
             List<int[]> pairs = RandomPairs.generateRandomPairs(1000, numVertices, 314159);
 
@@ -45,7 +44,7 @@ public class Main {
             long totalRelaxedEdges = 0;
             int queryCount = pairs.size();
 
-            // Step 3: Run the bidirectional Dijkstra algorithm for each pair
+            //  Run the bidirectional Dijkstra algorithm for each pair
             for (int[] pair : pairs) {
                 int source = pair[0];
                 int target = pair[1];
@@ -56,15 +55,9 @@ public class Main {
                 long end = System.nanoTime();
                 totalQueryTime += (end - start);
                 totalRelaxedEdges += bidirectionalResult.getRelaxedEdges();
-
-                // Optionally, validate results by comparing with Dijkstra results
-                // long dijkstraResult = Dijkstra.dijkstra(graph, source, target);
-                // if (dijkstraResult != bidirectionalResult.getShortestPath()) {
-                //     System.err.println("Mismatch in results for pair: " + source + ", " + target);
-                // }
             }
 
-            // Step 4: Compute and report average times and relaxed edges
+            // Compute and report average times and relaxed edges
             double avgQueryTime = totalQueryTime / 1_000_000.0 / queryCount; // Convert to ms
             double avgRelaxedEdges = totalRelaxedEdges / (double) queryCount;
 
