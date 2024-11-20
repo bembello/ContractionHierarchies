@@ -8,25 +8,5 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class App {
-    public static void main(String[] args) {
-        if (args.length < 1) {
-            System.out.println("Usage: java Main <input_file>");
-            return;
-        }
 
-        String filePath = args[0];
-        try (InputStream input = new FileInputStream(filePath)) {
-            Graph graph = Graph.readGraphFromInput(input);
-            System.out.println("Graph successfully built from " + filePath);
-
-            // Example usage of Dijkstra with a sample (s, t) pair.
-            int source = 0;  // Replace with actual source vertex
-            int target = 1;  // Replace with actual target vertex
-
-            int distance = Dijkstra.dijkstra(graph, source, target);
-            System.out.println("Distance from " + source + " to " + target + ": " + distance);
-        } catch (IOException e) {
-            System.err.println("Error reading file: " + e.getMessage());
-        }
-    }
 }

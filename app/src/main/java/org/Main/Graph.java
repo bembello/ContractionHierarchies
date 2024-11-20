@@ -40,6 +40,7 @@ public class Graph {
         }
     }
 
+    
         public List<Edge> getEdges() {
         Set<Edge> edgeSet = new HashSet<>();
         
@@ -50,6 +51,32 @@ public class Graph {
         
         return new ArrayList<>(edgeSet);
     }
+
+    // Check if an edge exists between two vertices
+public boolean hasEdge(long from, long to) {
+    List<Edge> edgesFrom = adjacencyList.get(from);
+    if (edgesFrom != null) {
+        for (Edge edge : edgesFrom) {
+            if (edge.getFrom() == from && edge.getTo() == to) {
+                return true;  // Edge exists
+            }
+        }
+    }
+    return false;  // Edge doesn't exist
+}
+
+// Get the cost of an edge between two vertices, or Integer.MAX_VALUE if no such edge exists
+public int getEdgeCost(long from, long to) {
+    List<Edge> edgesFrom = adjacencyList.get(from);
+    if (edgesFrom != null) {
+        for (Edge edge : edgesFrom) {
+            if (edge.getFrom() == from && edge.getTo() == to) {
+                return edge.getCost();
+            }
+        }
+    }
+    return Integer.MAX_VALUE;  // Return a large value if no edge exists
+}
 
     // Get all vertices in the graph
     public Map<Long, Vertex> getVertices() {
