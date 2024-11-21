@@ -8,5 +8,15 @@ public class Node {
         this.vertex = vertex;
         this.distance = distance;
     }
+
+    public long getVertex() {
+        return vertex;
+    }
+
+    public long getDistance() {
+        return distance;
+    }
+
+    
 }
 

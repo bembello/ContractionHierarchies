@@ -1,6 +1,6 @@
 package org.Main;
 
-class Edge {
+public class Edge {
     private long from;
     private long to;
     private int cost;

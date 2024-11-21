@@ -20,7 +20,7 @@ public class Graph {
         adjacencyList = new HashMap<>();
     }
 
-    // Add a vertex to the graph
+    // Add a vertex to the graph and initialize its adjacency list
     public void addVertex(long id, double longitude, double latitude) {
         vertices.put(id, new Vertex(id, longitude, latitude));
         adjacencyList.putIfAbsent(id, new ArrayList<>());
@@ -28,20 +28,14 @@ public class Graph {
 
     // Add an edge between two vertices
     public void addEdge(long from, long to, int cost) {
-        Vertex v1 = vertices.get(from);
-        Vertex v2 = vertices.get(to);
-        if (v1 != null && v2 != null) {
-            // Add edge to adjacency list
-            Edge edge = new Edge(from, to, cost);
-            adjacencyList.get(from).add(edge);
-            adjacencyList.get(to).add(edge);
-            v1.addEdge(edge);
-            v2.addEdge(edge);
-        }
+        adjacencyList.putIfAbsent(from, new ArrayList<>());
+        adjacencyList.putIfAbsent(to, new ArrayList<>());
+        Edge edge = new Edge(from, to, cost);
+        adjacencyList.get(from).add(edge);
     }
 
     
-        public List<Edge> getEdges() {
+    public List<Edge> getEdges() {
         Set<Edge> edgeSet = new HashSet<>();
         
         // Collect all edges from adjacency list
@@ -53,30 +47,30 @@ public class Graph {
     }
 
     // Check if an edge exists between two vertices
-public boolean hasEdge(long from, long to) {
-    List<Edge> edgesFrom = adjacencyList.get(from);
-    if (edgesFrom != null) {
-        for (Edge edge : edgesFrom) {
-            if (edge.getFrom() == from && edge.getTo() == to) {
-                return true;  // Edge exists
+    public boolean hasEdge(long from, long to) {
+        List<Edge> edgesFrom = adjacencyList.get(from);
+        if (edgesFrom != null) {
+            for (Edge edge : edgesFrom) {
+                if (edge.getFrom() == from && edge.getTo() == to) {
+                    return true;  // Edge exists
+                }
             }
         }
+        return false;  // Edge doesn't exist
     }
-    return false;  // Edge doesn't exist
-}
 
 // Get the cost of an edge between two vertices, or Integer.MAX_VALUE if no such edge exists
-public int getEdgeCost(long from, long to) {
-    List<Edge> edgesFrom = adjacencyList.get(from);
-    if (edgesFrom != null) {
-        for (Edge edge : edgesFrom) {
-            if (edge.getFrom() == from && edge.getTo() == to) {
-                return edge.getCost();
+    public int getEdgeCost(long from, long to) {
+        List<Edge> edgesFrom = adjacencyList.get(from);
+        if (edgesFrom != null) {
+            for (Edge edge : edgesFrom) {
+                if (edge.getFrom() == from && edge.getTo() == to) {
+                    return edge.getCost();
+                }
             }
         }
+        return Integer.MAX_VALUE;  // Return a large value if no edge exists
     }
-    return Integer.MAX_VALUE;  // Return a large value if no edge exists
-}
 
     // Get all vertices in the graph
     public Map<Long, Vertex> getVertices() {
@@ -130,6 +124,7 @@ public int getEdgeCost(long from, long to) {
             long to = Long.parseLong(edgeLine[1]);
             int cost = Integer.parseInt(edgeLine[2]);
             graph.addEdge(from, to, cost);
+            graph.addEdge(to, from, cost);
         }
 
         return graph;
