@@ -8,7 +8,6 @@ import org.Main.Graph;
 import org.Main.QueryResult;
 import org.junit.Test;
 
-
 public class BidirectionalDijkstraTest {
 
     @Test
@@ -33,13 +32,11 @@ public class BidirectionalDijkstraTest {
         graph.addVertex(2, 2, 2);
         graph.addEdge(0, 1, 5); // Edge 1: 0 -> 1
         graph.addEdge(1, 2, 5); // Edge 2: 1 -> 2
-    
-        // Path exists via vertex 1 (0 -> 1 -> 2)
+
         QueryResult result = BidirectionalDijkstra.bidirectionalDijkstra(graph, 0, 2);
         assertEquals(10, result.getShortestPath()); // Path cost is 10
         assertTrue(result.getRelaxedEdges() > 0); // Some edges were relaxed
     }
-    
 
     @Test
     public void testMultiplePaths() {
@@ -72,11 +69,32 @@ public class BidirectionalDijkstraTest {
     public void testSourceEqualsTarget() {
         Graph graph = new Graph();
         graph.addVertex(0, 0, 0); // Single vertex graph
-    
+
         QueryResult result = BidirectionalDijkstra.bidirectionalDijkstra(graph, 0, 0);
-    
-        // Fix assertion to expect shortest path 0 and 0 relaxed edges
+
+        // Path from source to itself should be 0
         assertEquals(0, result.getShortestPath());
         assertEquals(0, result.getRelaxedEdges());
+    }
+
+    @Test
+    public void testEarlyStopping() {
+        Graph graph = new Graph();
+        graph.addVertex(0, 0, 0);
+        graph.addVertex(1, 1, 1);
+        graph.addVertex(2, 2, 2);
+        graph.addVertex(3, 3, 3);
+
+        // Graph with multiple paths
+        graph.addEdge(0, 1, 1); // 0 -> 1
+        graph.addEdge(1, 3, 1); // 1 -> 3
+        graph.addEdge(0, 2, 2); // 0 -> 2
+        graph.addEdge(2, 3, 1); // 2 -> 3
+
+        QueryResult result = BidirectionalDijkstra.bidirectionalDijkstra(graph, 0, 3);
+
+        // Early stopping should identify the shortest path as 2 (0 -> 2 -> 3)
+        assertEquals(2, result.getShortestPath());
+        assertTrue(result.getRelaxedEdges() > 0); // Some edges should have been relaxed
     }
 }

@@ -2,11 +2,9 @@ package org.Main;
 
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.Set;
 
 public class Dijkstra {
     public static QueryResult dijkstra(Graph graph, long source, long target) {
@@ -56,20 +54,6 @@ public class Dijkstra {
     
         return new QueryResult(-1, relaxedEdges); // No path found
     }
-    
-    
-    
-    /*public static void main(String[] args) {
-        Graph graph = new Graph();
-        graph.addVertex(0, 0, 0);
-        graph.addVertex(1, 1, 1);
-        graph.addVertex(2, 2, 2);
-        graph.addEdge(0, 1, 3);
-        graph.addEdge(1, 2, 4);
-        graph.addEdge(0, 2, 10);
 
-        QueryResult result = Dijkstra.dijkstra(graph, 0, 2);
-        System.out.println(result.getRelaxedEdges());
-    } */
     
 }
