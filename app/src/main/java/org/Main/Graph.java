@@ -32,6 +32,9 @@ public class Graph {
         adjacencyList.putIfAbsent(to, new ArrayList<>());
         Edge edge = new Edge(from, to, cost);
         adjacencyList.get(from).add(edge);
+        
+        getVertexById(from).addEdge(edge);
+        getVertexById(to).addEdge(new Edge(to, from, cost));
     }
 
     

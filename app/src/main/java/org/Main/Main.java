@@ -25,16 +25,14 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-            // Load the graph from resources
             InputStream inputStream = Main.class.getClassLoader().getResourceAsStream("denmark.graph");
             if (inputStream == null) {
                 throw new IllegalArgumentException("File not found in resources: denmark.graph");
             }
 
-            // Read the graph from the input stream
             Graph graph = Graph.readGraphFromInput(inputStream);
 
-            // Generate random pairs (for queries) based on the number of vertices
+            // Generate random pairs 
             int numVertices = graph.getVertices().size();
             List<int[]> pairs = RandomPairs.generateRandomPairs(1000, numVertices, 314159);
 
@@ -48,11 +46,9 @@ public class Main {
             long totalQueryTime = 0;
             long totalRelaxedEdges = 0;
             int queryCount = pairs.size();
-            int i = 0;
 
             // Run the bidirectional Dijkstra algorithm for each random pair on the augmented graph
             for (int[] pair : pairs) {
-                System.out.println("Processing pair " + i++);
 
                 int source = pair[0];
                 int target = pair[1];

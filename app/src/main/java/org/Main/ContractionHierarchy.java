@@ -25,41 +25,40 @@ public class ContractionHierarchy {
     public void preprocess() {
         PriorityQueue<Vertex> priorityQueue = new PriorityQueue<>(Comparator.comparingInt(this::getNodePriority));
         Set<Vertex> dirtyVertices = new HashSet<>();
-    
+
         // Initialize priority queue with non-contracted vertices
         for (Vertex v : graph.getVertices().values()) {
             if (!contractedVertices.contains(v)) {
                 priorityQueue.add(v);
             }
         }
-    
+
         Map<Vertex, Integer> priorityCache = new HashMap<>();
         for (Vertex v : graph.getVertices().values()) {
             priorityCache.put(v, getNodePriority(v));
         }
-    
+
         while (!priorityQueue.isEmpty() && contractedVertices.size() < graph.getVertices().size()) {
             Vertex v = priorityQueue.poll();
             if (contractedVertices.contains(v)) continue;
-    
+
             vertexOrder.add(v);
             contractedVertices.add(v);
             rankMap.put(v, vertexOrder.size());
-            System.out.println("Contracted vertices: " + contractedVertices.size());
-    
+
             int shortcutsAdded = contractVertex(v);
-            System.out.println("Shortcuts added for vertex " + v.getId() + ": " + shortcutsAdded);
-    
+
             totalShortcutsAdded += shortcutsAdded;
-    
+
             for (Edge e : v.getEdges()) {
                 Vertex neighbor = graph.getVertexById(e.getTo());
                 if (!contractedVertices.contains(neighbor)) {
                     dirtyVertices.add(neighbor);
                 }
             }
-    
+
             if (dirtyVertices.size() > updateThreshold) {
+                // Recalculate priorities for dirty vertices and add them back to the queue
                 for (Vertex vertex : dirtyVertices) {
                     if (!contractedVertices.contains(vertex)) {
                         priorityQueue.add(vertex);
@@ -70,7 +69,6 @@ public class ContractionHierarchy {
             }
         }
     }
-    
 
     public int getNodePriority(Vertex v) {
         int edgeDiff = getEdgeDifference(v);
@@ -118,14 +116,26 @@ public class ContractionHierarchy {
         // Add shortcut edges
         for (Edge shortcutEdge : allEdges) {
             augmentedGraph.addEdge(shortcutEdge.getFrom(), shortcutEdge.getTo(), shortcutEdge.getCost());
+            augmentedGraph.addEdge(shortcutEdge.getTo(), shortcutEdge.getFrom(), shortcutEdge.getCost()); // Ensure bidirectional shortcuts
         }
 
         return augmentedGraph;
     }
 
+    public Set<Vertex> getNeighbors(Vertex v) {
+        Set<Vertex> neighbors = new HashSet<>();
+        for (Edge edge : v.getEdges()) {
+            Vertex neighbor = graph.getVertexById(edge.getTo());
+            if (!contractedVertices.contains(neighbor)) {  // Only include non-contracted neighbors
+                neighbors.add(neighbor);
+            }
+        }
+        return neighbors;
+    }
+
     public int contractVertex(Vertex v) {
         int shortcutsAdded = 0;
-    
+
         Map<Vertex, Integer> neighbors = new HashMap<>();
         for (Edge edge : v.getEdges()) {
             Vertex neighbor = graph.getVertexById(edge.getTo());
@@ -133,39 +143,32 @@ public class ContractionHierarchy {
                 neighbors.put(neighbor, edge.getCost());
             }
         }
-    
+
         // Attempt to add shortcuts between neighbors
         for (Vertex u : neighbors.keySet()) {
-
             for (Vertex w : neighbors.keySet()) {
-
                 if (!u.equals(w)) {
                     int shortcutCost = neighbors.get(u) + neighbors.get(w);
-    
+
                     // Debug log for checking edges and costs
-                    System.out.println("Checking shortcut between " + u.getId() + " and " + w.getId());
                     boolean hasEdge = graph.hasEdge(u.getId(), w.getId());
-                    System.out.println("Has edge: " + hasEdge);
-    
+
                     int existingEdgeCost = hasEdge ? graph.getEdgeCost(u.getId(), w.getId()) : -1;
-                    System.out.println("Existing edge cost: " + existingEdgeCost + ", shortcut cost: " + shortcutCost);
-    
+
                     // Check if a shortcut can be added
                     if (!hasEdge || existingEdgeCost > shortcutCost) {
-                        System.out.println("No edge or shortcut cost is better, adding shortcut.");
                         graph.addEdge(u.getId(), w.getId(), shortcutCost);
+                        graph.addEdge(w.getId(), u.getId(), shortcutCost); // Add both directions for undirected graph
                         allEdges.add(new Edge(u.getId(), w.getId(), shortcutCost));
+                        allEdges.add(new Edge(w.getId(), u.getId(), shortcutCost)); // Add reverse edge
                         shortcutsAdded++;
-                    } else {
-                        System.out.println("Existing edge is cheaper, not adding shortcut.");
-                    }
+                    } 
                 }
             }
         }
-    
+
         return shortcutsAdded;
     }
-    
 
     public boolean isUniqueShortestPath(Vertex u, Vertex v, Vertex w) {
         // Simplified uniqueness check for now, disable the Dijkstra call temporarily for debugging
